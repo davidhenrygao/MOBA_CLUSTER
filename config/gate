@@ -1,0 +1,14 @@
+include "path_cfg"
+
+thread = 3
+harbor = 0
+start = "gate/main"	-- main script
+
+if $DAEMON then
+	logger = root .. "log/skynet_gate.log"
+	daemon = root .. "log/skynet_gate.pid"
+end
+
+ip = "192.168.0.168"
+--ip = "192.168.2.188"
+port = 10096

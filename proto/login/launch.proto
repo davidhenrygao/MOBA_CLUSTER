@@ -1,0 +1,27 @@
+package login;
+
+option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
+
+message c2s_launch{
+    /*
+       index begin from 1, and increase every re-launch.
+       hashkey(a) transfer a to 8 byte key.
+
+       etoken = base64(token)+"@"+base64(subid)+":"+base64(index)
+       hmac = base64(hmac64(hashkey(etoken), secret))
+       signature = etoken+":"+hmac
+       */
+    required string signature = 1;
+};
+
+message s2c_launch{
+    required int32 code = 1;
+	message player_info {
+		required uint64 id = 1;
+		required string name = 2;
+		optional uint32 level = 3;
+		optional uint32 exp = 4;
+		optional uint32 gold = 5;
+	};
+    optional player_info player= 2;
+};

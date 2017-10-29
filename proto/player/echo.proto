@@ -1,0 +1,11 @@
+package player;
+
+option go_package = "github.com/davidhenrygao/GolangTest/proto/player";
+
+message c2s_echo{
+    required string msg = 1;
+};
+
+message s2c_echo{
+    optional string msg = 1;
+};

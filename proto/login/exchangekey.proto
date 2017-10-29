@@ -1,0 +1,17 @@
+package login;
+
+option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
+
+/*
+   P = 0xffffffffffffffc5ull
+   G = 5
+*/
+
+message c2s_exchangekey{
+    required string clientkey = 1; //base64(dh-exchange(8 byte randomkey))
+};
+
+message s2c_exchangekey{
+    required int32 code = 1;
+    optional string serverkey= 2; //base64(dh-exchange(8 byte randomkey))
+};

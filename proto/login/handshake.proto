@@ -1,0 +1,11 @@
+package login;
+
+option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
+
+message c2s_handshake{
+    required string encode_challenge = 1; //base64(hmac64(challenge, secret))
+};
+
+message s2c_handshake{
+    required int32 code = 1;
+};
