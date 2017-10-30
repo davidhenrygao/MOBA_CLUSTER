@@ -1,9 +1,11 @@
 package login;
 
-option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
-
 message c2s_login{
-    required string token = 1; //base64(DES(secret, base64(token)+"@"+base64(platform)))
+    required uint32 platformid = 1;
+    required string openid = 2;
+    optional string unionid = 3;
+    optional string nickname = 4;
+    optional string headimgurl = 5;
 };
 
 message s2c_login{

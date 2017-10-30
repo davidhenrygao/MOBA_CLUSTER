@@ -51,11 +51,11 @@ function CMD.start(conf)
 end
 
 local internal_id = 1
-function CMD.login(account, token, uid, secret)
+function CMD.login(account, uid, secret)
 	local subid = crypt.hashkey(crypt.randomkey() .. account .. tostring(internal_id))
 	internal_id = internal_id + 1
 	local username = string.format("%s@%s", 
-		crypt.base64encode(token), crypt.base64encode(subid))
+		crypt.base64encode(account), crypt.base64encode(subid))
 	skynet.call(data.launchserver, "lua", "login", account, subid, username, uid, secret)
 	local server_addr = data.ip .. ":" .. tostring(data.port)
 	login_account_info[account] = {

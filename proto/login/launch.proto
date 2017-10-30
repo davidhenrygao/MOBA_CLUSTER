@@ -1,14 +1,12 @@
 package login;
 
-option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
-
 message c2s_launch{
     /*
        index begin from 1, and increase every re-launch.
        hashkey(a) transfer a to 8 byte key.
 
-       etoken = base64(token)+"@"+base64(subid)+":"+base64(index)
-       hmac = base64(hmac64(hashkey(etoken), secret))
+       etoken = base64(openid)+"@"+base64(subid)+":"+base64(index)
+       hmac = base64(hmac64_md5(hashkey(etoken), secret))
        signature = etoken+":"+hmac
        */
     required string signature = 1;
@@ -22,6 +20,33 @@ message s2c_launch{
 		optional uint32 level = 3;
 		optional uint32 exp = 4;
 		optional uint32 gold = 5;
+		optional string headimgurl = 6;
 	};
     optional player_info player= 2;
 };
+
+/*
+   hashkey算法代码如下：（采用了djb和js字符串hash算法的结合）
+   接受sz长度的字符串str，返回8 byte长度的key。
+	static void Hash(const char * str, int sz, uint8_t key[8]) {
+			uint32_t djb_hash = 5381L;
+			uint32_t js_hash = 1315423911L;
+
+			int i;
+			for (i=0;i<sz;i++) {
+					uint8_t c = (uint8_t)str[i];
+					djb_hash += (djb_hash << 5) + c;
+					js_hash ^= ((js_hash << 5) + c + (js_hash >> 2));
+			}
+
+			key[0] = djb_hash & 0xff;
+			key[1] = (djb_hash >> 8) & 0xff;
+			key[2] = (djb_hash >> 16) & 0xff;
+			key[3] = (djb_hash >> 24) & 0xff;
+
+			key[4] = js_hash & 0xff;
+			key[5] = (js_hash >> 8) & 0xff;
+			key[6] = (js_hash >> 16) & 0xff;
+			key[7] = (js_hash >> 24) & 0xff;
+	}
+*/

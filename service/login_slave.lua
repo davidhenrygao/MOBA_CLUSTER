@@ -53,21 +53,20 @@ local function read_cmd_msg(fd, expect_cmd, protostr)
 	return true, result
 end
 
+----[[
+local function strtohex(str)
+	local len = str:len()
+	local fmt = "0X"
+	for i=1,len do
+		fmt = fmt .. string.format("%02x", str:byte(i))
+	end
+	return fmt
+end
+--]]
 
 local function write_cmd_msg(fd, proto_cmd, protostr, orgdata)
 	local data = pb.encode(protostr, orgdata)
 	local msg = protocol.serialize(Context[fd].session, proto_cmd, data)
-	--[[
-	local function strtohex(str)
-		local len = str:len()
-		local fmt = "0X"
-		for i=1,len do
-			fmt = fmt .. string.format("%02x", str:byte(i))
-		end
-		return fmt
-	end
-	log("write_cmd_msg: %s.\n", strtohex(msg))
-	--]]
 	net.write(fd, msg)
 end
 
@@ -95,6 +94,7 @@ local function handshake(fd)
 		code = errcode.SUCCESS,
 	}
 	local clientkey = crypt.base64decode(result.clientkey)
+	log("clientkey: %s.\n", strtohex(clientkey))
 	if #clientkey ~= 8 then
 		log("client key is not 8 byte length, got %d byte length.", #clientkey)
 		s2c_serverkey.code = errcode.LOGIN_CLIENT_KEY_LEN_ILLEGAL
@@ -102,11 +102,15 @@ local function handshake(fd)
 		return false
 	end
 	local serverkey = crypt.randomkey()
+	log("serverkey: %s.\n", strtohex(serverkey))
 	s2c_serverkey.serverkey = crypt.base64encode(crypt.dhexchange(serverkey))
+	log("client will recieve serverkey: %s.\n", strtohex(crypt.dhexchange(serverkey)))
 	write_cmd_msg(fd, cmd.LOGIN_EXCHANGEKEY, "login.s2c_exchangekey", s2c_serverkey)
 
 	-- handshake
 	local secret = crypt.dhsecret(clientkey, serverkey)
+	log("secret: %s.\n", strtohex(secret))
+	log("base64(secret) : %s.\n", crypt.base64encode(secret))
 	ok, result = read_cmd_msg(fd, cmd.LOGIN_HANDSHAKE, "login.c2s_handshake")
 	if not ok then
 		return false
@@ -127,7 +131,8 @@ local function handshake(fd)
 	return true
 end
 
-local function dblogin(account, token, platform)
+local function dblogin(logininfo)
+	local account = logininfo.openid
 	local account_info
 	local account_info_str
 	local player
@@ -140,17 +145,25 @@ local function dblogin(account, token, platform)
 		local uid = skynet.call(uuidserver, "lua", "get_player_uuid")
 		account_info = {
 			uid = uid,
-			token = token,
-			platform = platform,
+			platformid = logininfo.platformid,
+			openid = account,
+			unionid = logininfo.unionid,
 		}
 		account_info_str = cjson.encode(account_info)
 		ret = db:hset(ACCOUNT, account, account_info_str)
 		if ret == 0 then
 			return errcode.REGISTER_DB_ERR
 		end
+		local name
+		if logininfo.nickname == "" then
+			name = "player" .. tostring(os.time())
+		else
+			name = logininfo.nickname
+		end
 		player = {
 			id = account_info.uid, 
-			name = "player" .. tostring(os.time()),
+			name = name,
+			headimgurl = logininfo.headimgurl,
 			level = 1,
 			gold = 0,
 			exp = 0,
@@ -182,6 +195,9 @@ local function login(fd)
 	local s2c_login = {
 		code = errcode.SUCCESS,
 	}
+
+	local openid = result.openid
+	--[[
 	local etoken = crypt.base64decode(result.token)
 	local tokenstr = crypt.desdecode(secret, etoken)
 	local token, platform = tokenstr:match("([^@]+)@(.+)")
@@ -189,31 +205,32 @@ local function login(fd)
 	platform = crypt.base64decode(platform)
 	-- 去第三方验证token
 	-- 暂时直接将token@platform作为Account存储
+	--]]
 	local login_manager = skynet.localname(".manager")
-	local err, gate = skynet.call(login_manager, "lua", "prelogin", tokenstr)
+	local err, gate = skynet.call(login_manager, "lua", "prelogin", openid)
 	if err ~= errcode.SUCCESS then
 		s2c_login.code = err
 		write_cmd_msg(fd, cmd.LOGIN, "login.s2c_login", s2c_login)
 		return false
 	end
 	local uid 
-	err, uid = dblogin(tokenstr, token, platform)
+	err, uid = dblogin(result)
 	if err ~= errcode.SUCCESS then
-		skynet.call(login_manager, "lua", "loginfailed", tokenstr)
+		skynet.call(login_manager, "lua", "loginfailed", openid)
 		s2c_login.code = err
 		write_cmd_msg(fd, cmd.LOGIN, "login.s2c_login", s2c_login)
 		return false
 	end
 	local subid
 	local server_addr
-	err, subid, server_addr = skynet.call(gate, "lua", "login", tokenstr, token, uid, secret)
+	err, subid, server_addr = skynet.call(gate, "lua", "login", openid, uid, secret)
 	if err ~= errcode.SUCCESS then
-		skynet.call(login_manager, "lua", "loginfailed", tokenstr)
+		skynet.call(login_manager, "lua", "loginfailed", openid)
 		s2c_login.code = err
 		write_cmd_msg(fd, cmd.LOGIN, "login.s2c_login", s2c_login)
 		return false
 	end
-	skynet.call(login_manager, "lua", "login", tokenstr, gate)
+	skynet.call(login_manager, "lua", "login", openid, gate)
 	s2c_login.info = {
 		subid = crypt.base64encode(subid),
 		server_addr = crypt.base64encode(server_addr),
