@@ -1,0 +1,8 @@
+import "card.proto";
+
+package protocol;
+
+//卡牌更新推送
+message s2c_update_cards{
+	repeated card cards = 2;    //卡牌列表
+};

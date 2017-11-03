@@ -1,17 +1,11 @@
 
-ì
-login.protologin"f
-	c2s_login
-
-platformid (
-openid (	
-unionid (	
-nickname (	
-
-headimgurl (	"n
+¦
+login.protoprotocol"
+	c2s_login
+token (	"q
 	s2c_login
-code (%
-info (2.login.s2c_login.result,
+code ((
+info (2.protocol.s2c_login.result,
 result
 subid (	
 server_addr (	

@@ -1,0 +1,10 @@
+package protocol;
+
+message c2s_change__deck{
+    required uint32 index = 1;    //卡组索引
+};
+
+message s2c_change_deck{
+    required int32 code = 1;    //返回码，0表示成功
+    optional uint32 index = 2;    //卡组索引
+};

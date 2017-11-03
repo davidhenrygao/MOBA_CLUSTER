@@ -1,4 +1,4 @@
-package common;
+package protocol;
 
 enum cmd {
     //0-99 common use

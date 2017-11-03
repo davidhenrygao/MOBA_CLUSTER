@@ -1,11 +1,15 @@
-package login;
+package protocol;
+
+/*
+   DES采用ECB模式，padding方式如下：
+   DES(secret, origText), m = sizeof(origText) % 8, a = 8 - m;
+   先追加值为0x80的字节到origText末尾，再追加 8 - a 个0值字节到origText末尾。
+   然后采用DES的ECB模式加密即可；
+   同理，解密过程先用DES的ECB模式解密，然后反过来unpadding即可。
+*/
 
 message c2s_login{
-    required uint32 platformid = 1;
-    required string openid = 2;
-    optional string unionid = 3;
-    optional string nickname = 4;
-    optional string headimgurl = 5;
+    required string token = 1; //base64(DES(secret, base64(token)+"@"+base64(platform)))
 };
 
 message s2c_login{

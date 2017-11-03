@@ -1,0 +1,13 @@
+import "card.proto";
+
+package protocol;
+
+message c2s_load_cards{
+    optional uint32 begin_index = 1 [default = 1];    //起始索引
+    optional uint32 page_size = 2;      //页大小（默认为0，返回所有卡牌）
+};
+
+message s2c_load_cards{
+    required int32 code = 1;    //返回码，0表示成功
+	repeated card cards = 2;    //卡牌列表
+};

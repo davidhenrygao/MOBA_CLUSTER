@@ -1,11 +1,11 @@
-package login;
+package protocol;
 
 message c2s_launch{
     /*
        index begin from 1, and increase every re-launch.
        hashkey(a) transfer a to 8 byte key.
 
-       etoken = base64(openid)+"@"+base64(subid)+":"+base64(index)
+       etoken = base64(token)+"@"+base64(subid)+":"+base64(index)
        hmac = base64(hmac64_md5(hashkey(etoken), secret))
        signature = etoken+":"+hmac
        */
@@ -20,7 +20,6 @@ message s2c_launch{
 		optional uint32 level = 3;
 		optional uint32 exp = 4;
 		optional uint32 gold = 5;
-		optional string headimgurl = 6;
 	};
     optional player_info player= 2;
 };

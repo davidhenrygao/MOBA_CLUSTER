@@ -1,0 +1,9 @@
+package protocol;
+
+message c2s_check_card{
+    required uint32 id = 1;    //卡牌id（配表id）
+};
+
+message s2c_check_card{
+    required int32 code = 1;    //返回码，0表示成功
+};

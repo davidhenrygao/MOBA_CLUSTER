@@ -1,11 +1,4 @@
-package login;
-
-option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
-
-/*
-   P = 0xffffffffffffffc5ull
-   G = 5
-*/
+package protocol;
 
 message c2s_exchangekey{
     required string clientkey = 1; //base64(dh-exchange(8 byte randomkey))

@@ -1,0 +1,8 @@
+package protocol;
+
+message card{
+    required uint32 id = 1;       //卡牌id（配表id）
+    optional uint32 level = 2;    //卡牌等级
+    optional uint32 amount = 3;   //卡牌数量
+    optional uint32 state = 4;    //卡牌状态（0：解锁状态；1：新获得状态；2：终态）
+};

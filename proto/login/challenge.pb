@@ -1,5 +1,5 @@
 
-o
-challenge.protologin""
+?
+challenge.protoprotocol""
 s2c_challenge
-	challenge (	B1Z/github.com/davidhenrygao/GolangTest/proto/login
+	challenge (	

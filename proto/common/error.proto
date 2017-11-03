@@ -1,4 +1,4 @@
-package common;
+package protocol;
 
 enum error {
 	//0-999 are reserved for system use.

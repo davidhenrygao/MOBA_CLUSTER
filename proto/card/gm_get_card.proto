@@ -1,0 +1,11 @@
+package protocol;
+
+// 临时GM命令：获取指定卡牌
+message c2s_gm_get_card {
+	required uint32 id = 1;  //卡牌id
+	required uint32 amount = 2; //数量
+}
+
+message s2c_gm_get_card {
+    required int32 code = 1;    //返回码，0表示成功
+};

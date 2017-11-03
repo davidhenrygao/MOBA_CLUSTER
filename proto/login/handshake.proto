@@ -1,9 +1,19 @@
-package login;
+package protocol;
 
-option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
+/*
+hmac64_md5:
+	First, generate a byte array in two steps :
+		1. concatenate challenge(8 byte) and secret(8 byte);
+		2. repeate the byte array(16 byte) 3 times;
+	Second, use md5 algorithm to calcalate the byte array(48 byte), get a 16 byte result;
+	Third, do the loop as below, and get the ret(8 byte):
+		for i = 0; i < 8; i++ {
+			ret[i] = result[i] ^ result[i+8]
+		}
+*/
 
 message c2s_handshake{
-    required string encode_challenge = 1; //base64(hmac64(challenge, secret))
+    required string encode_challenge = 1; //base64(hmac64_md5(challenge, secret))
 };
 
 message s2c_handshake{

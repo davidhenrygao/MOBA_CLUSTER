@@ -1,0 +1,16 @@
+package protocol;
+
+message c2s_up_card_level{
+    required uint32 id = 1;    //卡牌id（配表id）
+    optional uint32 up_level = 2 [default = 1];      //升级值（默认为1，不填即表示升1级）
+};
+
+message s2c_up_card_level{
+	message card_lv_up_info {
+		required uint32 id = 1;
+		required uint32 org_level = 2;
+		optional uint32 up_level = 3 [default = 1];
+	};
+    required int32 code = 1;    //返回码，0表示成功
+	optional card_lv_up_info info = 2;  //卡牌升级信息
+};

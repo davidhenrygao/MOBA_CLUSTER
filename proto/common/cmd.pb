@@ -1,6 +1,6 @@
 
-ž
-	cmd.protocommon*ˆ
+ 
+	cmd.protoprotocol*ˆ
 cmd
 	HEARTBEAT
 ECHO

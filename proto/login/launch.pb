@@ -1,19 +1,17 @@
 
-é
-launch.protologin"
+Û
+launch.protoprotocol"
 
 c2s_launch
-	signature (	"°
+	signature (	"Ÿ
 
 s2c_launch
-code (-
-player (2.login.s2c_launch.player_infoe
+code (0
+player (2 .protocol.s2c_launch.player_infoQ
 player_info
 
 id (
 name (	
 level (
 exp (
-gold (
-
-headimgurl (	
+gold (

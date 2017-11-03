@@ -1,6 +1,4 @@
-package login;
-
-option go_package = "github.com/davidhenrygao/GolangTest/proto/login";
+package protocol;
 
 message s2c_challenge{
     required string challenge = 1; //base64(8 byte randomkey)

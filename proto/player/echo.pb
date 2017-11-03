@@ -1,8 +1,8 @@
 
-z
+H
 
-echo.protoplayer"
+echo.protoprotocol"
 c2s_echo
 msg (	"
 s2c_echo
-msg (	B2Z0github.com/davidhenrygao/GolangTest/proto/player
+msg (	

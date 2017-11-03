@@ -1,0 +1,16 @@
+package protocol;
+
+message change_info {
+    required uint32 id = 1;    //卡牌id（配表id）
+	required uint32 pos = 2;   //放置位置（从1开始）
+    optional uint32 card_desk_index = 3;      //卡组索引（不填默认为0，即表示当前卡组）
+};
+
+message c2s_change_card_deck {
+	required change_info change = 1;
+};
+
+message s2c_change_card_deck {
+    required int32 code = 1;    //返回码，0表示成功
+	optional change_info change = 2;
+};

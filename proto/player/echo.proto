@@ -1,6 +1,4 @@
-package player;
-
-option go_package = "github.com/davidhenrygao/GolangTest/proto/player";
+package protocol;
 
 message c2s_echo{
     required string msg = 1;

@@ -1,0 +1,10 @@
+package protocol;
+
+message card_deck{
+	message card_deck_elem{
+		required uint32 id = 1;          //卡牌id（配表id）
+		optional uint32 pos = 2;         //在卡组内的位置（从1开始）
+	};
+	required uint32 index = 1;           //卡组索引（从1开始）
+	repeated card_deck_elem elems = 2;   //卡组元素列表
+};

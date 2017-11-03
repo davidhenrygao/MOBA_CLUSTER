@@ -1,0 +1,13 @@
+import "card_deck.proto";
+
+package protocol;
+
+message c2s_load_card_desks{
+    optional uint32 p = 1;    //服务器这边pbc不能定义空结构，因此定义该占位符，客户端不填即可。
+};
+
+message s2c_load_card_desks{
+    required int32 code = 1;
+	optional int32 current_index = 2;  //当前使用卡组索引
+	repeated card_deck desks = 3;      //卡组列表
+};

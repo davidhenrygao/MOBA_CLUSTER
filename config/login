@@ -9,6 +9,10 @@ if $DAEMON then
 	daemon = root .. "log/skynet_login.pid"
 end
 
+luaservice = root .. "service/login/?.lua;" .. luaservice
+
+
+debug_console_port = 8000
 ip = "192.168.0.168"
 --ip = "192.168.2.188"
 port = 10086
