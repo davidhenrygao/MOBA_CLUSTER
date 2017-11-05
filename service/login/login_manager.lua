@@ -1,8 +1,14 @@
 local skynet = require "skynet"
+require "skynet.manager"
 local gateserver = require "snax.gateserver"
 local netpack = require "skynet.netpack"
+local cluster = require "skynet.cluseter"
 
-local watchdog
+local log = require "log"
+
+local balance
+local worker_list = {}
+
 local connection = {}	-- fd -> connection : { fd , client, agent , ip, mode }
 local forwarding = {}	-- agent -> connection
 
@@ -14,27 +20,39 @@ skynet.register_protocol {
 local handler = {}
 
 function handler.open(source, conf)
-	watchdog = conf.watchdog or source
+	local workers = conf.workers or 8
+	for i=1,workers do
+		table.insert(worker_list, skynet.newservice("login_worker"), i)
+	end
+	balance = 1
+
+	-- open cluster
+	cluster.register(".login", skynet.self())
+	cluster.open("login")
+end
+
+function handler.connect(fd, addr)
+	local worker = balance % #worker_list
+	balance = balance + 1
+	local c = {
+		fd = fd,
+		ip = addr,
+		worker = worker_list[worker],
+	}
+	connection[fd] = c
+	log("client[%s] connected: fd[%d], dispatch to worker[%d]", 
+		addr, fd, worker)
 end
 
 function handler.message(fd, msg, sz)
 	-- recv a package, forward it
 	local c = connection[fd]
-	local agent = c.agent
+	local worker = c.worker
 	if agent then
 		skynet.redirect(agent, c.client, "client", 1, msg, sz)
 	else
 		skynet.send(watchdog, "lua", "socket", "data", fd, netpack.tostring(msg, sz))
 	end
-end
-
-function handler.connect(fd, addr)
-	local c = {
-		fd = fd,
-		ip = addr,
-	}
-	connection[fd] = c
-	skynet.send(watchdog, "lua", "socket", "open", fd, addr)
 end
 
 local function unforward(c)
