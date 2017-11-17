@@ -1,20 +1,18 @@
 local skynet = require "skynet"
 require "skynet.manager"
 local gateserver = require "snax.gateserver"
-local netpack = require "skynet.netpack"
 local cluster = require "skynet.cluseter"
 
 local log = require "log"
 
-local balance
 local worker_list = {}
 
-local connection = {}	-- fd -> connection : { fd , client, agent , ip, mode }
-local forwarding = {}	-- agent -> connection
+local connection = {}	-- fd -> connection : { id , ip, worker, }
 
 skynet.register_protocol {
 	name = "client",
 	id = skynet.PTYPE_CLIENT,
+	pack = skynet.pack,
 }
 
 local handler = {}
@@ -24,82 +22,65 @@ function handler.open(source, conf)
 	for i=1,workers do
 		table.insert(worker_list, skynet.newservice("login_worker"), i)
 	end
-	balance = 1
 
 	-- open cluster
 	cluster.register(".login", skynet.self())
 	cluster.open("login")
 end
 
+-- Note: fd is an increase id in skynet c socket, not the 'fd' in the os.
 function handler.connect(fd, addr)
-	local worker = balance % #worker_list
-	balance = balance + 1
+	local worker = fd % #worker_list
 	local c = {
-		fd = fd,
+		id = fd,
 		ip = addr,
 		worker = worker_list[worker],
 	}
 	connection[fd] = c
 	log("client[%s] connected: fd[%d], dispatch to worker[%d]", 
 		addr, fd, worker)
+	local ret = skynet.call(c.worker, "lua", "open_connection", c.id)
+	if ret == 0 then
+		gateserver.openclient(fd)
+	else
+		log("worker(%d) open_connection(fd:%d) error(%d).", c.worker, fd, ret)
+		gateserver.closeclient(fd)
+	end
 end
 
 function handler.message(fd, msg, sz)
 	-- recv a package, forward it
 	local c = connection[fd]
 	local worker = c.worker
-	if agent then
-		skynet.redirect(agent, c.client, "client", 1, msg, sz)
-	else
-		skynet.send(watchdog, "lua", "socket", "data", fd, netpack.tostring(msg, sz))
-	end
-end
-
-local function unforward(c)
-	if c.agent then
-		forwarding[c.agent] = nil
-		c.agent = nil
-		c.client = nil
-	end
+	skynet.send(worker, "client", c.id, msg, sz)
 end
 
 local function close_fd(fd)
 	local c = connection[fd]
 	if c then
-		unforward(c)
+		skynet.call(c.worker, "lua", "close_connection", c.id)
 		connection[fd] = nil
 	end
 end
 
 function handler.disconnect(fd)
+	log("connection(%d) close.", fd)
 	close_fd(fd)
-	skynet.send(watchdog, "lua", "socket", "close", fd)
 end
 
 function handler.error(fd, msg)
+	log("connection(%d) error(%s).", fd, msg)
 	close_fd(fd)
-	skynet.send(watchdog, "lua", "socket", "error", fd, msg)
 end
 
 function handler.warning(fd, size)
-	skynet.send(watchdog, "lua", "socket", "warning", fd, size)
+	log("connection(%d) warning: send buffer size: %d.", fd, size)
 end
 
 local CMD = {}
 
-function CMD.forward(source, fd, client, address)
-	local c = assert(connection[fd])
-	unforward(c)
-	c.client = client or 0
-	c.agent = address or source
-	forwarding[c.agent] = c
-	gateserver.openclient(fd)
-end
-
-function CMD.accept(source, fd)
-	local c = assert(connection[fd])
-	unforward(c)
-	gateserver.openclient(fd)
+function CMD.register_gate(conf)
+	
 end
 
 function CMD.kick(source, fd)
