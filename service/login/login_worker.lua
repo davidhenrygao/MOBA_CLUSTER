@@ -268,6 +268,7 @@ end
 
 local CMD = {}
 
+-- TODO: Create a connection pool
 function CMD.open_connection(cid)
 	local c = {
 		cid = cid,
@@ -283,16 +284,20 @@ function CMD.close_connection(cid)
 	return 0
 end
 
+local function unpack_cli_msg(msg, sz)
+	local cid, smsg = skynet.unpack(msg, sz)
+	local c = assert(connection[cid])
+end
+
+local function dispatch_cli_msg(sess, src, ...)
+	
+end
+
 skynet.register_protocol {
 	name = "client",
 	id = skynet.PTYPE_CLIENT,
-	unpack = function (msg, sz)
-		local cid, omsg, osz = skynet.unpack(msg, sz)
-		local c = assert(connection[cid])
-	end,
-	dispatch = function (_, _, ...)
-		
-	end,
+	unpack = unpack_cli_msg,
+	dispatch = dispatch_cli_msg,
 }
 
 skynet.init( function ()

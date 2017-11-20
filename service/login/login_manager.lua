@@ -1,6 +1,7 @@
 local skynet = require "skynet"
 require "skynet.manager"
 local gateserver = require "snax.gateserver"
+local netpack = "skynet.netpack"
 local cluster = require "skynet.cluseter"
 
 local log = require "log"
@@ -52,7 +53,10 @@ function handler.message(fd, msg, sz)
 	-- recv a package, forward it
 	local c = connection[fd]
 	local worker = c.worker
-	skynet.send(worker, "client", c.id, msg, sz)
+	-- Note! Must use netpack.tostring to free memory alloc by netpack.filter!
+	-- Because the reciever will only free the memory alloc by skynet.pack in skynet.send.
+	-- If you use skynet.redirect( in service/gate.lua ), the reciever will free it.
+	skynet.send(worker, "client", c.id, netpack.tostring(msg, sz))
 end
 
 local function close_fd(fd)
