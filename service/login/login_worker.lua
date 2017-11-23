@@ -266,7 +266,25 @@ local function handle(fd)
 	socket.close(fd)
 end
 
+local login_state_cmd_list = {
+	cmd.LOGIN_EXCHANGEKEY,
+	cmd.LOGIN_HANDSHAKE,
+	cmd.LOGIN,
+}
+
+local cmd_pb_name = {} -- { [cmd] = { req = "xxx", resp = "xxx" }, ... }
+
 local CMD = {}
+
+local function response_to_cli(cid, session, command, protoname, tbl)
+	local data = pb.encode(protoname, tbl)
+	local ret = protocol.serialize(session, command, data)
+	--skynet.send(
+end
+
+local function push_to_cli(cid, command, protoname, tbl)
+	response_to_cli(cid, 0, command, protoname, tbl)
+end
 
 -- TODO: Create a connection pool
 function CMD.open_connection(cid)
@@ -284,13 +302,62 @@ function CMD.close_connection(cid)
 	return 0
 end
 
-local function unpack_cli_msg(msg, sz)
-	local cid, smsg = skynet.unpack(msg, sz)
+function CMD.start(cid)
+	assert(cid)
 	local c = assert(connection[cid])
+
+	-- send challenge
+	local challenge = crypt.randomkey()
+	local s2c_challenge = {
+		challenge = crypt.base64encode(challenge),
+	}
+	push_to_cli(cid, cmd.LOGIN_CHALLENGE, 
+		"protocol.s2c_challenge", s2c_challenge)
+
+	c.challenge = challenge
+
+	return 0
 end
 
-local function dispatch_cli_msg(sess, src, ...)
-	
+local function unpack_cli_msg(msg, sz)
+	local cid, smsg = skynet.unpack(msg, sz)
+	assert(cid and smsg)
+	local ok, sess, req_cmd, data = pcall(protocol.unserialize, smsg)
+	if not ok then
+		log("Connection[%d] protocol unserialize error: %s", cid, sess)
+		return cid, false, errcode.PROTO_UNSERIALIZATION_FAILED
+	end
+	local pb_name_tbl = cmd_pb_name[req_cmd]
+	if pb_name_tbl == nil or pb_name_tbl.req == nil then
+		log("Connection[%d] receive unknown cmd: %d", cid, req_cmd)
+		return cid, false, errcode.UNKNOWN_CMD
+	end
+	local args, err = pb.decode(pb_name_tbl.req, data)
+	if err ~= nil then
+		log("Connection[%d] cmd[%d] protobuf decode error: %s.", 
+			cid, req_cmd, err)
+		return cid, false, errcode.PB_DECODE_ERROR
+	end
+	return cid, true, sess, req_cmd, args
+end
+
+local function dispatch_cli_msg(sess, src, cid, result, ...)
+	local code
+	local ret
+	local c = assert(connection[cid], 
+				string.format("Connection(%d) not found.", cid))
+	if result == false then
+		code = ...
+		assert(code)
+		local s2c_protocol_decode_err = {
+			code = code,
+		}
+		ret = pb.encode("protocol.s2c_protocol_decode_err", 
+				s2c_protocol_decode_err)
+	else
+		local sess, req_cmd, args = ...
+		assert(sess and req_cmd and args)
+	end
 end
 
 skynet.register_protocol {

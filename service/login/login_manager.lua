@@ -43,7 +43,9 @@ function handler.connect(fd, addr)
 	local ret = skynet.call(c.worker, "lua", "open_connection", c.id)
 	if ret == 0 then
 		gateserver.openclient(fd)
-	else
+		ret = skynet.call(c.worker, "lua", "start", c.id)
+	end
+	if ret ~= 0 then
 		log("worker(%d) open_connection(fd:%d) error(%d).", c.worker, fd, ret)
 		gateserver.closeclient(fd)
 	end

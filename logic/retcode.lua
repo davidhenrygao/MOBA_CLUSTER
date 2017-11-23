@@ -5,6 +5,7 @@ retcode.SUCCESS = 0
 retcode.INTERNAL = 1
 retcode.UNKNOWN_CMD = 2
 retcode.PROTO_UNSERIALIZATION_FAILED = 3
+retcode.PB_DECODE_ERROR = 4
 
 -- 1000-9999 are used for login
 retcode.LOGIN_CLIENT_KEY_LEN_ILLEGAL = 1000

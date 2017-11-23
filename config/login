@@ -6,7 +6,7 @@ start = "login/main"	-- main script
 
 if $DAEMON then
 	logger = root .. "log/skynet_login.log"
-	daemon = root .. "log/skynet_login.pid"
+	daemon = root .. "run/skynet_login.pid"
 end
 
 luaservice = root .. "service/login/?.lua;" .. luaservice
