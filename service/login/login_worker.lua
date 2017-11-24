@@ -286,36 +286,37 @@ local function push_to_cli(cid, command, protoname, tbl)
 	response_to_cli(cid, 0, command, protoname, tbl)
 end
 
+local function send_challenge(c)
+	-- send challenge
+	local challenge = crypt.randomkey()
+	local s2c_challenge = {
+		challenge = crypt.base64encode(challenge),
+	}
+	push_to_cli(c.cid, cmd.LOGIN_CHALLENGE, 
+		"protocol.s2c_challenge", s2c_challenge)
+
+	c.challenge = challenge
+
+	return 0
+end
+
 -- TODO: Create a connection pool
 function CMD.open_connection(cid)
+	assert(cid)
 	local c = {
 		cid = cid,
 		state = 1,
 		tick = skynet.now(),
 	}
 	connection[cid] = c
+
+	skynet.fork(send_challenge, c)
+
 	return 0
 end
 
 function CMD.close_connection(cid)
 	connection[cid] = nil
-	return 0
-end
-
-function CMD.start(cid)
-	assert(cid)
-	local c = assert(connection[cid])
-
-	-- send challenge
-	local challenge = crypt.randomkey()
-	local s2c_challenge = {
-		challenge = crypt.base64encode(challenge),
-	}
-	push_to_cli(cid, cmd.LOGIN_CHALLENGE, 
-		"protocol.s2c_challenge", s2c_challenge)
-
-	c.challenge = challenge
-
 	return 0
 end
 
