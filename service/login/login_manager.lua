@@ -43,6 +43,7 @@ function handler.connect(fd, addr)
 	local ret = skynet.call(c.worker, "lua", "open_connection", c.id)
 	if ret == 0 then
 		gateserver.openclient(fd)
+		skynet.send(c.worker, "lua", "init_connection", c.id)
 	else
 		log("worker(%d) open_connection(fd:%d) error(%d).", c.worker, fd, ret)
 		gateserver.closeclient(fd)
@@ -83,6 +84,8 @@ end
 
 local CMD = {}
 
+-- TODO: Seperate it to gate_mgr server.
+-- This is a simple load balance implementation, can be improved in the future.
 function CMD.register_gate(conf)
 	
 end

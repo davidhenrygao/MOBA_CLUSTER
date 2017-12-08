@@ -16,7 +16,7 @@ local db
 local ACCOUNT = "account"
 local PLAYER = "player:"
 
-local connection = {}  -- connection[cid] = { cid, state, tick, }
+local connection = {}  -- connection[cid] = { cid, state, tick, challenge,}
 
 local Context = {}
 
@@ -306,13 +306,17 @@ function CMD.open_connection(cid)
 	local c = {
 		cid = cid,
 		state = 1,
-		tick = skynet.now(),
 	}
 	connection[cid] = c
-
-	skynet.fork(send_challenge, c)
-
 	return 0
+end
+
+function CMD.init_connection(cid)
+	assert(cid)
+	local c = assert(connection[cid])
+	send_challenge(c)
+	c.tick = skynet.now()
+	-- TODO: add to timer
 end
 
 function CMD.close_connection(cid)

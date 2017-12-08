@@ -13,7 +13,6 @@ skynet.start(function()
 	-- TODO: Seperate it from login sever.
 	skynet.uniqueservice("uuidserver")
 
-	-- TODO: Seperate it to login center server.
 	local login_manager = skynet.newservice("login_manager")
 	skynet.name(".manager", login_manager)
 	skynet.call(login_manager, "lua", "open", {
