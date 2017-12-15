@@ -31,15 +31,15 @@ end
 
 -- Note: fd is an increase id in skynet c socket, not the 'fd' in the os.
 function handler.connect(fd, addr)
-	local worker = fd % #worker_list
+	local idx = fd % #worker_list
 	local c = {
 		id = fd,
 		ip = addr,
-		worker = worker_list[worker],
+		worker = worker_list[idx],
 	}
 	connection[fd] = c
 	log("client[%s] connected: fd[%d], dispatch to worker[%d]", 
-		addr, fd, worker)
+		addr, fd, idx)
 	local ret = skynet.call(c.worker, "lua", "open_connection", c.id)
 	if ret == 0 then
 		gateserver.openclient(fd)

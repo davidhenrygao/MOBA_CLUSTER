@@ -526,6 +526,10 @@ function M.extract(tbl)
     end
 end
 
+function M.getP()
+	return P
+end
+
 M.default=set_default
 
 return M
