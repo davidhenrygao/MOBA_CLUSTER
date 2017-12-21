@@ -7,7 +7,7 @@ local CMD = {}
 
 function CMD.load(conf)
 	local prefix_path = conf.prefix_path or skynet.getenv("root")
-	local file_paths = conf.file_paths
+	local file_paths = assert(conf.file_paths)
 	local files = ff.search(prefix_path, file_paths, "pb")
 	for _,file in ipairs(files) do
 		pb.register_file(file)

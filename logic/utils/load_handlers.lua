@@ -1,54 +1,25 @@
 local skynet = require "skynet"
 local log = require "log"
-local lfs = require "lfs"
-local path_mgr = require "logic.utils.path_mgr"
+local ff = require "filefinder"
+local path_mgr = require "filepathmgr"
 
-local logic = "logic"
-local root = skynet.getenv("root") .. logic .. "/"
+local logic = "logic/handler"
+local root = path_mgr.appendslash(skynet.getenv("root"))
+local path_prefix = path_mgr.appendslash(root .. logic)
 
 local function load_handlers(paths)
-	local path
-	local file
-	local hinfo
 	local handlers = {}
-	for _,p in ipairs(paths) do
-		path = root .. p
-		local attrs, err = lfs.attributes(path)
-		repeat
-			if not attrs then
-				log("In path[%s], lfs attributes function error: %s.", 
-					path, err)
-				break
-			end
-			if attrs.mode == "file" and path_mgr.suffix(p) == "lua" then
-				file = path_mgr.trans2luapath(logic .. "/" .. path_mgr.prefix(p))
-				hinfo = require(file)
-				handlers[hinfo.cmd] = hinfo
-			end
-			if attrs.mode == "directory" then
-				for f in lfs.dir(path) do
-					local new_path = path .. "/" .. f
-					attrs, err = lfs.attributes(new_path)
-					repeat
-						if not attrs then
-							log("In path[%s], lfs attributes function error: %s.", 
-								new_path, err)
-							break
-						end
-						if attrs.mode == "file" and path_mgr.prefix(f) ~= "init" 
-							and path_mgr.suffix(f) == "lua" then
-							file = path_mgr.trans2luapath(
-								logic .. "/" .. p .. "/" .. path_mgr.prefix(f))
-							--log("after trans2luapath file is : %s.", file)
-							hinfo = require(file)
-							handlers[hinfo.cmd] = hinfo
-						end
-					until true
-				end
-			end
-		until true
+	local files = ff.search(path_prefix, paths, "lua")
+	for _,file in ipairs(files) do
+		local basename = path_mgr.basename(file)
+		local root_path_len = string.len(root)
+		local rfile = path_mgr.trans2luapath(file:sub(root_path_len+1))
+		log("rfile: %s.", rfile)
+		if path_mgr.prefix(basename) ~= "init" then
+			local hinfo = require(rfile)
+			handlers[hinfo.cmd] = hinfo
+		end
 	end
-
 	return handlers
 end
 

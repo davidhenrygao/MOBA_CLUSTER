@@ -81,7 +81,6 @@ serialize = function (tBuffer, valueObj, tParsed)
 	end
 end
 
-
 local function tableToStr(tData)
 	assert(type(tData) == "table", "tData is not a table, got " .. type(tData) .. "|" .. tostring(tData))
 
@@ -91,7 +90,6 @@ local function tableToStr(tData)
 	local sValue = table.concat(tBuffer)
 	return sValue
 end
-
 
 local function strToTable(sValue)
 	-- body
@@ -104,5 +102,16 @@ end
 
 utils.str_to_table = strToTable
 utils.table_to_str = tableToStr
+
+-- strtohex
+local function strtohex(str)
+	local len = str:len()
+	local fmt = "0X"
+	for i=1,len do
+		fmt = fmt .. string.format("%02x", str:byte(i))
+	end
+	return fmt
+end
+utils.strtohex = strtohex
 
 return utils

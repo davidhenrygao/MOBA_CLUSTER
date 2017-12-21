@@ -67,6 +67,7 @@ function filefinder.search(prefix_path, file_paths, file_suffix_name, recursive)
 			end
 		end
 	end
+	return files
 end
 
 return filefinder

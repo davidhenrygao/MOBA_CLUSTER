@@ -3,8 +3,10 @@ require "skynet.manager"
 local gateserver = require "snax.gateserver"
 local netpack = "skynet.netpack"
 local cluster = require "skynet.cluseter"
+local driver = require "skynet.socketdriver"
 
 local log = require "log"
+local utils = require "luautils"
 
 local worker_list = {}
 
@@ -21,7 +23,8 @@ local handler = {}
 function handler.open(source, conf)
 	local workers = conf.workers or 8
 	for i=1,workers do
-		table.insert(worker_list, skynet.newservice("login_worker"), i)
+		local worker = skynet.newservice("login_worker", i, skynet.self())
+		table.insert(worker_list, worker)
 	end
 
 	-- open cluster
@@ -92,6 +95,12 @@ end
 
 function CMD.kick(source, fd)
 	gateserver.closeclient(fd)
+end
+
+function CMD.response(fd, msg)
+	assert(fd and msg)
+	log("Response to connection(%d): [%s].", fd, utils.strtohex(msg))
+	driver.send(fd, msg)
 end
 
 function handler.command(cmd, source, ...)

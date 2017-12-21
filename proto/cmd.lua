@@ -7,6 +7,7 @@ local CMD = {
     HEARTBEAT = 1,
     ECHO = 2,
 	LOGOUT = 3,
+	PROTOCOL_ERR = 4,
 
 -- 100-199 login server use
     LOGIN_CHALLENGE = 100,

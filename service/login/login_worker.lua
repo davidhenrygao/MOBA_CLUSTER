@@ -1,22 +1,20 @@
 local skynet = require "skynet"
+local log = require "log"
+local message = require "message"
 local socket = require "skynet.socket"
 local crypt = require "skynet.crypt"
-local log = require "log"
 local pb = require "protobuf"
 local net = require "netpackage"
 local protocol = require "protocol"
 local cmd = require "proto.cmd"
 local errcode = require "logic.retcode"
-local redis = require "skynet.db.redis"
 local cjson = require "cjson"
 
-local id = ...
+local handlers = require "logic.handler.login"
 
-local db
-local ACCOUNT = "account"
-local PLAYER = "player:"
+local id, source = ...
 
-local connection = {}  -- connection[cid] = { cid, state, tick, challenge,}
+local connection = {}  -- connection[cid] = { cid, stage, tick, sess, challenge,}
 
 local Context = {}
 
@@ -266,24 +264,28 @@ local function handle(fd)
 	socket.close(fd)
 end
 
-local login_state_cmd_list = {
+local login_stage_cmd_list = {
 	cmd.LOGIN_EXCHANGEKEY,
 	cmd.LOGIN_HANDSHAKE,
 	cmd.LOGIN,
 }
 
-local cmd_pb_name = {} -- { [cmd] = { req = "xxx", resp = "xxx" }, ... }
-
 local CMD = {}
 
-local function response_to_cli(cid, session, command, protoname, tbl)
-	local data = pb.encode(protoname, tbl)
-	local ret = protocol.serialize(session, command, data)
-	--skynet.send(
+local function gen_response(cid, resp_encode)
+	assert(cid)
+	assert(resp_encode and type(resp_encode) == "funtion")
+	return function (tdata)
+		assert(tdata)
+		local msg = resp_encode(tdata)
+		skynet.send(source, "lua", "response", cid, msg)
+	end
 end
 
-local function push_to_cli(cid, command, protoname, tbl)
-	response_to_cli(cid, 0, command, protoname, tbl)
+local function send_message(cid, command, tdata)
+	assert(cid and command and tdata)
+	local msg = message.push_encode(command, tdata)
+	skynet.send(source, "lua", "response", cid, msg)
 end
 
 local function send_challenge(c)
@@ -292,8 +294,7 @@ local function send_challenge(c)
 	local s2c_challenge = {
 		challenge = crypt.base64encode(challenge),
 	}
-	push_to_cli(c.cid, cmd.LOGIN_CHALLENGE, 
-		"protocol.s2c_challenge", s2c_challenge)
+	send_message(c.cid, cmd.LOGIN_CHALLENGE, s2c_challenge)
 
 	c.challenge = challenge
 
@@ -305,7 +306,9 @@ function CMD.open_connection(cid)
 	assert(cid)
 	local c = {
 		cid = cid,
-		state = 1,
+		stage = 1,
+		tick = skynet.now(),
+		sess = 1,
 	}
 	connection[cid] = c
 	return 0
@@ -327,41 +330,61 @@ end
 local function unpack_cli_msg(msg, sz)
 	local cid, smsg = skynet.unpack(msg, sz)
 	assert(cid and smsg)
-	local ok, sess, req_cmd, data = pcall(protocol.unserialize, smsg)
+	local ok, sess, req_cmd, args, resp_encode = message.decode(smsg)
 	if not ok then
-		log("Connection[%d] protocol unserialize error: %s", cid, sess)
-		return cid, false, errcode.PROTO_UNSERIALIZATION_FAILED
+		local err = sess
+		log("Connection[%d] message decode error: %d", cid, err)
+		if err == message.errcode.PROTO_UNSERIALIZATION_FAILED then
+			err = errcode.PROTO_UNSERIALIZATION_FAILED
+		elseif err == message.errcode.UNKNOWN_REQ_CMD then
+			err = errcode.UNKNOWN_CMD
+		elseif err == message.errcode.PB_DECODE_ERROR then
+			err = errcode.PB_DECODE_ERROR
+		end
+		return cid, false, err
 	end
-	local pb_name_tbl = cmd_pb_name[req_cmd]
-	if pb_name_tbl == nil or pb_name_tbl.req == nil then
-		log("Connection[%d] receive unknown cmd: %d", cid, req_cmd)
-		return cid, false, errcode.UNKNOWN_CMD
-	end
-	local args, err = pb.decode(pb_name_tbl.req, data)
-	if err ~= nil then
-		log("Connection[%d] cmd[%d] protobuf decode error: %s.", 
-			cid, req_cmd, err)
-		return cid, false, errcode.PB_DECODE_ERROR
-	end
-	return cid, true, sess, req_cmd, args
+	return cid, true, sess, req_cmd, args, resp_encode
 end
 
-local function dispatch_cli_msg(sess, src, cid, result, ...)
+local function dispatch_cli_msg(session, src, cid, result, ...)
 	local code
-	local ret
 	local c = assert(connection[cid], 
 				string.format("Connection(%d) not found.", cid))
 	if result == false then
 		code = ...
 		assert(code)
-		local s2c_protocol_decode_err = {
+		local s2c_protocol_err = {
 			code = code,
 		}
-		ret = pb.encode("protocol.s2c_protocol_decode_err", 
-				s2c_protocol_decode_err)
+		send_message(cid, cmd.PROTOCOL_ERR, s2c_protocol_err)
+		-- close connection ?
 	else
-		local sess, req_cmd, args = ...
+		local sess, req_cmd, args, resp_encode  = ...
 		assert(sess and req_cmd and args)
+		local response
+		if resp_encode then
+			response = gen_response(cid, resp_encode)
+		end
+		if req_cmd ~= cmd.HEARTBEAT and 
+			req_cmd ~= login_stage_cmd_list[c.stage] then
+			if response then
+				response({code = errcode.LOGIN_CMD_ORDER_ERR,})
+			end
+			-- close connection ?
+			return
+		end
+		local handler = handlers[req_cmd]
+		assert(handler and handler.f)
+		local f = handler.f
+		-- check sess
+		c.sess = sess + 1
+		c.tick = skynet.now()
+		local ctx = {
+			conn = c,
+			args = args,
+			response = response,
+		}
+		f(ctx)
 	end
 end
 
@@ -373,24 +396,11 @@ skynet.register_protocol {
 }
 
 skynet.init( function ()
-	local load_file = {
-		"login/challenge.pb",
-		"login/exchangekey.pb",
-		"login/handshake.pb",
-		"login/login.pb",
-		"login/launch.pb",
-	}
-	for _,file in ipairs(load_file) do
-		pb.register_file(skynet.getenv("root") .. "proto/" .. file)
-	end
-	db = redis.connect {
-		host = "127.0.0.1" ,
-		port = 6379 ,
-		db = 0 ,
-	}
+	message.init(handlers)
 end)
 
 skynet.start( function ()
+	log("login worker(%d) start.", id)
 	skynet.dispatch("lua", function (sess, src, command, ...)
 		local f = CMD[command]
 		if f then

@@ -12,6 +12,8 @@ skynet.start(function()
 	local protomanager = skynet.uniqueservice("protomanager")
 	skynet.call(protomanager, "lua", "load", {
 		file_paths = {
+			"proto/common/heartbeat.pb",
+			"proto/common/protocol_err.pb",
 			"proto/login",
 		},
 	})
